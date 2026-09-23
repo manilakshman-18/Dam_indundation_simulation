@@ -1,0 +1,170 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f1f5f9;
+    color: #172033;
+}
+
+.topbar {
+    background: #12355b;
+    color: white;
+    padding: 22px 5%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+}
+
+.topbar h1 {
+    margin: 0 0 5px;
+}
+
+.topbar p {
+    margin: 0;
+    opacity: 0.85;
+}
+
+.tag {
+    background: #fbbf24;
+    color: #172033;
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.container {
+    width: 92%;
+    max-width: 1200px;
+    margin: 25px auto;
+}
+
+.intro,
+.panel {
+    background: white;
+    padding: 22px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px #00000010;
+}
+
+.intro h2,
+.panel h2 {
+    margin-top: 0;
+}
+
+.notice,
+.warning {
+    background: #fff7ed;
+    border-left: 4px solid #f97316;
+    padding: 12px;
+    line-height: 1.5;
+}
+
+.layout {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 20px;
+}
+
+label {
+    display: block;
+    font-weight: bold;
+    margin-top: 15px;
+    margin-bottom: 6px;
+}
+
+input,
+select,
+button {
+    width: 100%;
+    padding: 11px;
+    border-radius: 7px;
+    border: 1px solid #cbd5e1;
+    font-size: 14px;
+}
+
+button {
+    margin-top: 20px;
+    background: #1d4ed8;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+button:disabled {
+    background: #94a3b8;
+    cursor: wait;
+}
+
+.status {
+    margin-top: 15px;
+    padding: 10px;
+    background: #eff6ff;
+    border-radius: 7px;
+    font-size: 14px;
+}
+
+#map {
+    height: 480px;
+    width: 100%;
+    border-radius: 8px;
+}
+
+.map-note {
+    font-size: 13px;
+    color: #64748b;
+}
+
+.result-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.result-grid div {
+    background: #f1f5f9;
+    padding: 12px;
+    border-radius: 8px;
+}
+
+.result-grid strong,
+.result-grid span {
+    display: block;
+}
+
+.result-grid strong {
+    font-size: 12px;
+    color: #64748b;
+    margin-bottom: 5px;
+}
+
+.download {
+    display: inline-block;
+    margin-top: 15px;
+    padding: 12px;
+    background: #15803d;
+    color: white;
+    text-decoration: none;
+    border-radius: 7px;
+}
+
+@media (max-width: 800px) {
+    .layout {
+        grid-template-columns: 1fr;
+    }
+
+    .result-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}

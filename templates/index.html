@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mettur Dam Break Modelling</title>
+
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
+
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+<header class="topbar">
+    <div>
+        <h1>DamSafe</h1>
+        <p>Mettur Dam Break Inundation Modelling</p>
+    </div>
+    <span class="tag">MVP DEMO</span>
+</header>
+
+<main class="container">
+
+    <section class="intro">
+        <h2>Flood Simulation Dashboard</h2>
+        <p>
+            Prepare a dam-break scenario and visualize a preliminary
+            study-area layer for Mettur Dam.
+        </p>
+        <div class="notice">
+            DEMO LIMITATION: This prototype does not perform SPH,
+            Delft3D, or hydraulic calculations. The displayed scenario
+            is illustrative and must not be used for evacuation or
+            real flood-safety decisions.
+        </div>
+    </section>
+
+    <section class="layout">
+
+        <div class="panel">
+            <h2>Scenario Inputs</h2>
+
+            <form id="simulationForm">
+
+             <label for="latitude">Dam latitude</label>
+<input
+    type="number"
+    id="latitude"
+    name="latitude"
+    value="11.7870"
+    step="0.000001"
+    required
+>
+
+<label for="longitude">Dam longitude</label>
+<input
+    type="number"
+    id="longitude"
+    name="longitude"
+    value="77.8000"
+    step="0.000001"
+    required
+>
+                <label for="model">Modelling stage</label>
+                <select id="model" name="model">
+                    <option value="Preliminary scenario">
+                        Preliminary scenario
+                    </option>
+                    <option value="SPH - Planned integration">
+                        SPH - Planned integration
+                    </option>
+                    <option value="Delft3D - Planned integration">
+                        Delft3D - Planned integration
+                    </option>
+                </select>
+
+                <label for="water_level">
+                    Initial water level (m)
+                </label>
+                <input
+                    type="number"
+                    id="water_level"
+                    name="water_level"
+                    value="100"
+                    min="0.01"
+                    step="0.1"
+                    required
+                >
+
+                <label for="breach_width">
+                    Assumed breach width (m)
+                </label>
+                <input
+                    type="number"
+                    id="breach_width"
+                    name="breach_width"
+                    value="50"
+                    min="0.01"
+                    step="0.1"
+                    required
+                >
+
+                <label for="simulation_time">
+                    Requested simulation duration (hours)
+                </label>
+                <input
+                    type="number"
+                    id="simulation_time"
+                    name="simulation_time"
+                    value="6"
+                    min="0.01"
+                    step="0.5"
+                    required
+                >
+
+                <label for="dem">
+                    Upload DEM (.tif / .tiff)
+                </label>
+                <input
+                    type="file"
+                    id="dem"
+                    name="dem"
+                    accept=".tif,.tiff"
+                    required
+                >
+
+                <button type="submit" id="runButton">
+                    Run Preliminary Scenario
+                </button>
+
+            </form>
+
+            <div id="status" class="status">
+                Waiting for input.
+            </div>
+        </div>
+
+        <div class="panel map-panel">
+            <h2>Study Area Map</h2>
+            <div id="map"></div>
+            <p class="map-note">
+                The blue area is an illustrative scenario layer.
+                It is not a calculated flood extent.
+            </p>
+        </div>
+
+    </section>
+
+    <section class="panel results">
+        <h2>Simulation Results</h2>
+
+        <div id="results">
+            No scenario has been generated yet.
+        </div>
+
+        <a id="downloadLink"
+           class="download"
+           href="#"
+           download="scenario_result.json"
+           hidden>
+           Download GeoJSON result
+        </a>
+    </section>
+
+</main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+
+    // =====================================================
+    // MAP INITIALIZATION
+    // =====================================================
+
+    const map = L.map("map").setView(
+        [11.7870, 77.8000],
+        11
+    );
+
+    L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+            attribution: "&copy; OpenStreetMap contributors"
+        }
+    ).addTo(map);
+
+
+    // =====================================================
+    // VARIABLES
+    // =====================================================
+
+    let scenarioLayer = null;
+    let damMarker = null;
+
+
+    // =====================================================
+    // FORM ELEMENTS
+    // =====================================================
+
+    const form =
+        document.getElementById("simulationForm");
+
+    const statusBox =
+        document.getElementById("status");
+
+    const resultsBox =
+        document.getElementById("results");
+
+    const runButton =
+        document.getElementById("runButton");
+
+    const downloadLink =
+        document.getElementById("downloadLink");
+
+
+    // =====================================================
+    // FORM SUBMISSION
+    // =====================================================
+
+    form.addEventListener(
+        "submit",
+        async function(event) {
+
+            event.preventDefault();
+
+
+            // -------------------------------------------------
+            // Disable button while processing
+            // -------------------------------------------------
+
+            runButton.disabled = true;
+
+            runButton.textContent =
+                "Processing...";
+
+
+            statusBox.textContent =
+                "Uploading DEM and identifying dam location...";
+
+
+            resultsBox.textContent =
+                "Processing scenario...";
+
+
+            downloadLink.hidden = true;
+
+
+            // -------------------------------------------------
+            // Collect form data
+            // -------------------------------------------------
+
+            const formData =
+                new FormData(form);
+
+
+            try {
+
+                // =================================================
+                // SEND REQUEST TO FLASK
+                // =================================================
+
+                const response =
+                    await fetch(
+                        "/api/simulate",
+                        {
+                            method: "POST",
+                            body: formData
+                        }
+                    );
+
+
+                // =================================================
+                // READ RESPONSE
+                // =================================================
+
+                const data =
+                    await response.json();
+
+
+                // =================================================
+                // ERROR CHECK
+                // =================================================
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        data.error ||
+                        "Simulation request failed."
+                    );
+
+                }
+
+
+                // =================================================
+                // REMOVE OLD FLOOD LAYER
+                // =================================================
+
+                if (scenarioLayer) {
+
+                    map.removeLayer(
+                        scenarioLayer
+                    );
+
+                    scenarioLayer = null;
+
+                }
+
+
+                // =================================================
+                // REMOVE OLD DAM MARKER
+                // =================================================
+
+                if (damMarker) {
+
+                    map.removeLayer(
+                        damMarker
+                    );
+
+                    damMarker = null;
+
+                }
+
+
+                // =================================================
+                // CREATE NEW BLUE SCENARIO AREA
+                // =================================================
+
+                scenarioLayer =
+                    L.geoJSON(
+                        data.flood_layer,
+                        {
+
+                            style: {
+
+                                color: "#1d4ed8",
+
+                                weight: 2,
+
+                                fillColor: "#60a5fa",
+
+                                fillOpacity: 0.35
+
+                            },
+
+
+                            onEachFeature:
+                                function(
+                                    feature,
+                                    layer
+                                ) {
+
+                                    layer.bindPopup(
+
+                                        "<b>" +
+                                        data.dam_name +
+                                        "</b><br>" +
+
+                                        "Illustrative scenario area<br><br>" +
+
+                                        "<b>Warning:</b><br>" +
+
+                                        "This is not a calculated " +
+                                        "hydraulic flood prediction."
+
+                                    );
+
+                                }
+
+                        }
+                    )
+                    .addTo(map);
+
+
+                // =================================================
+                // CREATE DAM MARKER
+                // =================================================
+
+                damMarker =
+                    L.marker(
+                        [
+                            data.latitude,
+                            data.longitude
+                        ]
+                    )
+                    .addTo(map)
+
+                    .bindPopup(
+
+                        "<b>" +
+                        data.dam_name +
+                        "</b><br>" +
+
+                        "Simulation location<br><br>" +
+
+                        "Latitude: " +
+                        data.latitude +
+                        "<br>" +
+
+                        "Longitude: " +
+                        data.longitude
+
+                    )
+
+                    .openPopup();
+
+
+                // =================================================
+                // MOVE MAP TO SCENARIO AREA
+                // =================================================
+
+                if (
+                    scenarioLayer &&
+                    scenarioLayer.getBounds().isValid()
+                ) {
+
+                    map.fitBounds(
+                        scenarioLayer.getBounds(),
+                        {
+                            padding: [30, 30]
+                        }
+                    );
+
+                }
+                else {
+
+                    map.setView(
+                        [
+                            data.latitude,
+                            data.longitude
+                        ],
+                        13
+                    );
+
+                }
+
+
+                // =================================================
+                // STATUS
+                // =================================================
+
+                statusBox.textContent =
+                    data.status;
+
+
+                // =================================================
+                // SIMULATION RESULTS
+                // =================================================
+
+                resultsBox.innerHTML = `
+
+                    <div class="result-grid">
+
+                        <div>
+                            <strong>Scenario ID</strong>
+                            <span>
+                                ${data.scenario_id}
+                            </span>
+                        </div>
+
+
+                        <div>
+                            <strong>Dam</strong>
+                            <span>
+                                ${data.dam_name}
+                            </span>
+                        </div>
+
+
+                        <div>
+                            <strong>Latitude</strong>
+                            <span>
+                                ${data.latitude}
+                            </span>
+                        </div>
+
+
+                        <div>
+                            <strong>Longitude</strong>
+                            <span>
+                                ${data.longitude}
+                            </span>
+                        </div>
+
+
+                        <div>
+                            <strong>Model stage</strong>
+                            <span>
+                                ${data.model}
+                            </span>
+                        </div>
+
+
+                        <div>
+                            <strong>DEM file</strong>
+                            <span>
+                                ${data.dem_file}
+                            </span>
+                        </div>
+
+
+                        <div>
+                            <strong>Water level</strong>
+                            <span>
+                                ${data.water_level} m
+                            </span>
+                        </div>
+
+
+                        <div>
+                            <strong>Breach width</strong>
+                            <span>
+                                ${data.breach_width} m
+                            </span>
+                        </div>
+
+
+                        <div>
+                            <strong>Simulation duration</strong>
+                            <span>
+                                ${data.simulation_time} hours
+                            </span>
+                        </div>
+
+                    </div>
+
+
+                    <p class="warning">
+                        ${data.warning}
+                    </p>
+
+                `;
+
+
+                // =================================================
+                // SPH RESULT
+                // =================================================
+
+                if (
+                    data.model ===
+                    "SPH - Planned integration"
+                ) {
+
+                    const sphResult =
+                        document.createElement(
+                            "div"
+                        );
+
+                    sphResult.className =
+                        "result-card";
+
+
+                    sphResult.innerHTML = `
+
+                        <h3>
+                            SPH Simulation Result
+                        </h3>
+
+                        <p>
+                            DualSPHysics particle result
+                            processed using PyVista.
+                        </p>
+
+                        <img
+                            src="/sph-preview"
+                            alt="SPH Simulation Result"
+                            style="
+                                width:100%;
+                                max-width:700px;
+                                border-radius:12px;
+                                margin-top:10px;
+                            "
+                        >
+
+                    `;
+
+
+                    resultsBox.appendChild(
+                        sphResult
+                    );
+
+                }
+
+
+                // =================================================
+                // GEOJSON DOWNLOAD
+                // =================================================
+
+                const blob =
+                    new Blob(
+                        [
+                            JSON.stringify(
+                                data.flood_layer,
+                                null,
+                                2
+                            )
+                        ],
+                        {
+                            type:
+                                "application/geo+json"
+                        }
+                    );
+
+
+                downloadLink.href =
+                    URL.createObjectURL(
+                        blob
+                    );
+
+
+                downloadLink.download =
+                    data.dam_name
+                        .replace(
+                            /[^a-z0-9]/gi,
+                            "_"
+                        )
+                        + "_scenario.geojson";
+
+
+                downloadLink.hidden =
+                    false;
+
+
+                // =================================================
+                // FINAL STATUS
+                // =================================================
+
+                statusBox.textContent =
+                    "Scenario generated successfully for " +
+                    data.dam_name;
+
+
+            }
+            catch (error) {
+
+                // =================================================
+                // ERROR
+                // =================================================
+
+                console.error(
+                    "Simulation error:",
+                    error
+                );
+
+
+                statusBox.textContent =
+                    "Error";
+
+
+                resultsBox.innerHTML = `
+
+                    <p class="warning">
+                        ${error.message}
+                    </p>
+
+                `;
+
+            }
+            finally {
+
+                // =================================================
+                // ENABLE BUTTON AGAIN
+                // =================================================
+
+                runButton.disabled =
+                    false;
+
+                runButton.textContent =
+                    "Run Preliminary Scenario";
+
+            }
+
+        }
+    );
+
+</script>
+</body>
+</html>
