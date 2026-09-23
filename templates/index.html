@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mettur Dam Break Modelling</title>
+    <title>Damsafe - Dam Break Modelling</title>
 
     <link
         rel="stylesheet"
@@ -18,26 +18,29 @@
 <header class="topbar">
     <div>
         <h1>DamSafe</h1>
-        <p>Mettur Dam Break Inundation Modelling</p>
+        <p>Dam Break Inundation Modelling Platform</p>
     </div>
-    <span class="tag">MVP DEMO</span>
+    <span class="tag">HYDRODYNAMIC MODELLING</span>
 </header>
 
 <main class="container">
 
     <section class="intro">
-        <h2>Flood Simulation Dashboard</h2>
-        <p>
-            Prepare a dam-break scenario and visualize a preliminary
-            study-area layer for Mettur Dam.
-        </p>
-        <div class="notice">
-            DEMO LIMITATION: This prototype does not perform SPH,
-            Delft3D, or hydraulic calculations. The displayed scenario
-            is illustrative and must not be used for evacuation or
-            real flood-safety decisions.
-        </div>
-    </section>
+<h2>Flood Simulation Dashboard</h2>
+
+<p>
+    Configure a dam-break scenario using dam location,
+    terrain data and hydraulic parameters, then visualize
+    the resulting inundation information on an interactive map.
+</p>
+
+<div class="notice">
+    This platform is intended for hydrodynamic flood
+    modelling, inundation analysis and GIS-based
+    visualization. Results depend on the quality of the
+    terrain, river, dam and simulation data provided.
+</div>
+            </section>
 
     <section class="layout">
 
@@ -129,7 +132,7 @@
                 >
 
                 <button type="submit" id="runButton">
-                    Run Preliminary Scenario
+                    Run Flood Simulation
                 </button>
 
             </form>
@@ -140,12 +143,10 @@
         </div>
 
         <div class="panel map-panel">
-            <h2>Study Area Map</h2>
+            <h2>Dam & Flood simulation Map</h2>
             <div id="map"></div>
             <p class="map-note">
-                The blue area is an illustrative scenario layer.
-                It is not a calculated flood extent.
-            </p>
+                The map displays the selected dam location and simlation output for the configured scenorio            </p>
         </div>
 
     </section>
@@ -668,7 +669,7 @@
                     false;
 
                 runButton.textContent =
-                    "Run Preliminary Scenario";
+                    "Run Flood Simulation";
 
             }
 
